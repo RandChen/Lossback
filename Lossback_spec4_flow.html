@@ -1,0 +1,683 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Promotion Suite Phase 2：Lossback</title>
+<style>
+:root{
+  --paper:#F3F5F7;
+  --card:#FFFFFF;
+  --ink:#12263A;
+  --muted:#5B6B7B;
+  --line:#8796A5;
+  --rule:#D9DFE5;
+  --green:#12805C;
+  --amber:#B87414;
+  --font:"PingFang TC","Microsoft JhengHei","Noto Sans TC","Heiti TC",system-ui,-apple-system,"Segoe UI",sans-serif;
+}
+*{box-sizing:border-box}
+html{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+html,body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--font);font-size:16px;line-height:1.6}
+button{font-family:inherit;color:inherit}
+:focus-visible{outline:3px solid #1B6FD1;outline-offset:2px}
+
+header{position:relative;z-index:30;background:var(--paper);display:flex;align-items:flex-end;justify-content:space-between;gap:24px;padding:22px 32px 0;flex-wrap:wrap}
+h1{margin:0;font-size:26px;line-height:1.3;font-weight:800;letter-spacing:.01em}
+.sub{margin:2px 0 0;color:var(--muted);font-size:14px}
+.tabs{display:flex;gap:4px}
+.tab{background:none;border:0;border-bottom:3px solid transparent;padding:10px 18px;font-size:16px;font-weight:600;color:var(--muted);cursor:pointer}
+.tab[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--green)}
+.tab:hover{color:var(--ink)}
+
+.hint{margin:14px 32px 10px;color:var(--muted);font-size:14px}
+.hint kbd{font-family:inherit;background:#fff;border:1px solid var(--rule);border-radius:4px;padding:0 6px;font-size:13px}
+
+/* Flow */
+.flow-wrap{overflow-x:auto;padding:0 32px 8px}
+.flow{position:relative;display:grid;grid-template-columns:150px repeat(9,minmax(112px,1fr));min-width:1300px}
+.band{grid-column:1 / -1;background:var(--card);border-radius:12px;margin:5px 0;border:1px solid var(--rule);z-index:0}
+.lane-label{grid-column:1;z-index:1;display:flex;flex-direction:column;justify-content:center;margin:5px 0;padding:0 12px 0 16px;border-left:5px solid var(--lc);border-radius:12px 0 0 12px}
+.lane-label b{font-size:15px;line-height:1.35}
+.lane-label span{font-size:12px;color:var(--muted);line-height:1.35}
+.node{z-index:2;align-self:center;justify-self:stretch;margin:26px 12px;min-height:54px;padding:8px 8px;background:#fff;border:2px solid var(--lc);border-radius:8px;font-size:15px;font-weight:700;line-height:1.3;text-align:center;cursor:pointer;transition:background .15s,color .15s}
+.node:hover{background:color-mix(in srgb,var(--lc) 12%,#fff)}
+.node[aria-pressed="true"]{background:var(--lc);color:#fff}
+.node.rule{border-style:dashed}
+.node.decision{border-width:3px}
+svg.edges{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:1;overflow:visible}
+.legend{display:flex;gap:28px;margin:6px 32px 28px;color:var(--muted);font-size:13px;flex-wrap:wrap}
+.legend i{display:inline-block;width:34px;height:0;border-top:2px solid var(--line);vertical-align:middle;margin-right:8px}
+.legend i.back{border-top:2px dashed var(--amber)}
+.legend i.rl{border-top:2px dashed #3D4A57;width:22px}
+
+/* Drawer */
+.drawer{position:fixed;top:0;right:0;bottom:0;width:min(580px,100vw);background:#fff;box-shadow:-12px 0 40px rgba(18,38,58,.22);transform:translateX(104%);transition:transform .22s ease;z-index:20;display:flex;flex-direction:column}
+.drawer.open{transform:none}
+.d-head{padding:22px 28px 16px;border-bottom:1px solid var(--rule);position:relative}
+.pill{display:inline-block;padding:2px 12px;border-radius:999px;background:var(--lc);color:#fff;font-size:13px;font-weight:700}
+.d-head h2{margin:10px 40px 2px 0;font-size:26px;line-height:1.3}
+.d-ref{color:var(--muted);font-size:14px}
+.close{position:absolute;top:16px;right:18px;width:40px;height:40px;border:0;border-radius:8px;background:#EEF1F4;font-size:22px;line-height:1;cursor:pointer}
+.close:hover{background:#E1E6EB}
+.d-body{flex:1;overflow-y:auto;padding:18px 28px 28px}
+.d-body h3{margin:20px 0 8px;font-size:16px}
+.d-body h3:first-child{margin-top:0}
+.d-body ul{margin:0;padding:0;list-style:none}
+.d-body li{position:relative;padding:5px 0 5px 20px;font-size:17px}
+.d-body li::before{content:"";position:absolute;left:3px;top:.95em;width:7px;height:7px;border-radius:2px;background:var(--lc)}
+.example{margin:12px 0 0;padding:10px 14px;background:#F3F5F7;border-left:4px solid var(--line);border-radius:0 8px 8px 0;font-size:16px}
+.example b{display:block;font-size:13px;color:var(--muted);margin-bottom:2px}
+.next{margin:16px 0 0;padding:10px 14px;border:1.5px dashed var(--line);border-radius:8px;font-size:16px;color:#33414F}
+.next b{display:inline-block;margin-right:8px;padding:0 8px;border-radius:4px;background:#E4E9EE;font-size:12px}
+.linkbtn{margin-top:18px;padding:10px 16px;border:2px solid var(--green);background:#fff;color:var(--green);font-weight:700;font-size:15px;border-radius:8px;cursor:pointer}
+.linkbtn:hover{background:var(--green);color:#fff}
+.d-foot{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 28px;border-top:1px solid var(--rule);background:#FAFBFC}
+.d-foot button{padding:9px 18px;border:1.5px solid var(--ink);background:#fff;border-radius:8px;font-weight:700;font-size:15px;cursor:pointer}
+.d-foot button:hover:not(:disabled){background:var(--ink);color:#fff}
+.d-foot button:disabled{opacity:.35;cursor:default}
+.d-foot span{color:var(--muted);font-size:14px}
+
+/* Rules view */
+.rules{padding:22px 32px 40px;max-width:1280px}
+.seg{display:inline-flex;border:2px solid var(--ink);border-radius:10px;overflow:hidden;margin:6px 0 20px}
+.seg button{padding:10px 22px;border:0;background:#fff;font-size:16px;font-weight:700;cursor:pointer}
+.seg button+button{border-left:2px solid var(--ink)}
+.seg button[aria-selected="true"]{background:var(--ink);color:#fff}
+.rtitle{margin:0 0 4px;font-size:22px}
+.rdesc{margin:0 0 16px;color:var(--muted);font-size:15px}
+table{width:100%;border-collapse:collapse;background:#fff;border:1px solid var(--rule);border-radius:12px;overflow:hidden}
+th,td{padding:16px 20px;text-align:left;vertical-align:top;border-bottom:1px solid var(--rule);font-size:17px}
+th{background:#E9EEF2;font-size:15px}
+tr:last-child td{border-bottom:0}
+td.scn{width:26%;font-weight:700}
+td ol{margin:0;padding-left:22px}
+td li{padding:2px 0}
+.eg{color:var(--muted);font-size:15px}
+.rnote{margin-top:16px;font-size:15px;color:var(--muted)}
+.rnote button{border:0;background:none;color:#1B5FB8;font-size:15px;text-decoration:underline;cursor:pointer;padding:0}
+.hidden{display:none}
+.rules td:empty{padding:0}
+
+@media (prefers-reduced-motion:reduce){.drawer{transition:none}.node{transition:none}}
+@media (max-width:700px){header,.hint,.flow-wrap,.legend,.rules{padding-left:16px;padding-right:16px}.hint,.legend{margin-left:0;margin-right:0}}
+
+/* Document views (Changelog / Spec.) */
+.doc{padding:10px 32px 56px;max-width:920px}
+.doc h2{margin:6px 0 18px;font-size:26px;line-height:1.3}
+.doc h3{margin:36px 0 12px;padding-bottom:8px;border-bottom:2px solid var(--rule);font-size:21px;line-height:1.35}
+.doc h4{margin:26px 0 8px;font-size:18px;line-height:1.4;padding-left:12px;border-left:5px solid var(--green)}
+.doc p{margin:8px 0;font-size:17px}
+.doc ul,.doc ol{margin:6px 0;padding-left:26px}
+.doc li{padding:3px 0;font-size:17px}
+.doc li>ul,.doc li>ol{margin:4px 0}
+.doc ul>li::marker{color:var(--green)}
+.doc strong{font-weight:800}
+.doc .badge{display:inline-block;margin-right:6px;padding:0 8px;border-radius:4px;background:#E4E9EE;font-size:13px;font-weight:700;color:#33414F}
+.doc p.scn-h{margin-top:18px;margin-bottom:0;padding:10px 14px 0;background:#fff;border:1px solid var(--rule);border-bottom:0;border-radius:8px 8px 0 0}
+.doc p.scn-h+ol{margin:0 0 4px;padding:6px 14px 10px 40px;background:#fff;border:1px solid var(--rule);border-top:0;border-radius:0 0 8px 8px}
+.doc p.scn-t{margin:0 0 4px;padding:6px 14px 12px;background:#fff;border:1px solid var(--rule);border-top:0;border-radius:0 0 8px 8px}
+.doc p.scn-h:not(:has(+ ol)):not(:has(+ p.scn-t)){border-bottom:1px solid var(--rule);border-radius:8px;padding-bottom:10px}
+@media (max-width:700px){.doc{padding-left:16px;padding-right:16px}}
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>Promotion Suite Phase 2：Lossback</h1>
+    <p class="sub">SPEC 4 流程總覽</p>
+  </div>
+  <div class="tabs" role="tablist" aria-label="頁面">
+    <button class="tab" role="tab" id="tab-flow" aria-selected="true" data-view="flow">流程總覽</button>
+    <button class="tab" role="tab" id="tab-rules" aria-selected="false" data-view="rules">計算規則</button>
+    <button class="tab" role="tab" id="tab-changelog" aria-selected="false" data-view="changelog">Changelog</button>
+    <button class="tab" role="tab" id="tab-spec" aria-selected="false" data-view="spec">Spec.</button>
+  </div>
+</header>
+
+<section id="view-flow">
+  <p class="hint">點擊流程圖中的步驟，查看完整說明。說明開啟後，可用 <kbd>←</kbd> <kbd>→</kbd> 切換步驟，<kbd>Esc</kbd> 關閉。</p>
+  <div class="flow-wrap">
+    <div class="flow" id="flow"></div>
+  </div>
+  <div class="legend">
+    <span><i></i>流程方向</span>
+    <span><i class="back"></i>審核退回後重新編輯</span>
+    <span><i class="rl"></i>虛線外框為排除規則</span>
+  </div>
+</section>
+
+<section id="view-rules" class="rules hidden" aria-labelledby="tab-rules">
+  <div id="rule-body"></div>
+</section>
+
+<section id="view-changelog" class="doc hidden" aria-labelledby="tab-changelog">
+<h2 class="doc-title">Changelog</h2>
+<ol>
+<li><strong>Lossback 範圍與排他規則：by Match（單一賽事）或是 by Period（跨賽事）</strong><ul>
+<li>by Match：Match 狀態是 Operations 在 Admin site 有開盤，單場賽事官方結算完成時觸發計算與派發</li>
+<li>by Period：活動週期結束且該週期內所有賽事均已結算完成後，才執行全期總淨虧損計算並派發一次</li>
+<li>系統會自動過濾掉已被該家 Licensee 選定、排定、正在進行中的賽事，避免重複建立同一場賽事</li>
+</ul>
+</li>
+<li><strong>淨虧損計算公式細化與盈利排除機制</strong>：<ul>
+<li>by Match：指定賽事之總有效投注額 - 總派彩金額（計算結果為負值）</li>
+<li>by Period：活動週期內指定賽事之累計總有效投注額 - 累計總派彩金額（計算結果為負值）</li>
+<li>回饋百分比<ul>
+<li>前置判定：若總派彩金額 ≥ 總有效投注額（全期結算為盈利或平手），淨虧損計為 0，不符合門檻亦不派發回饋</li>
+<li>回饋公式：回饋 Free bet = min(淨虧損絕對值 × 回饋百分比, 回饋Free bet上限)</li>
+<li>回饋Free bet計算後若有小數點，則無條件捨去</li>
+</ul>
+</li>
+<li>回饋絕對金額<ul>
+<li>輸入淨虧低消、回饋絕對金額</li>
+</ul>
+</li>
+</ul>
+</li>
+<li><strong>Free bet setup 正式整合至 Campaign setup</strong>：<ul>
+<li>無需跨系統操作，直接於 Promotion Suite 設定派發之 Free Bet 規則：<ul>
+<li>適用範圍：All or by League, Sport, Bet type</li>
+<li>適用賠率：最低賠率, 最高賠率</li>
+<li>適用時間：Start time to End time</li>
+</ul>
+</li>
+</ul>
+</li>
+<li><strong>內部 Free bet API 和外部 Bonus API 規格</strong>：<ul>
+<li>新增派發 Free bet API：系統調用 Free bet API 派發 Free Bet</li>
+<li>新增 recall free bet API：當賽事 reSettle 時，系統調用 recall Freebet API 回收 Free bet，依照現有 Free bet 系統邏輯</li>
+<li>外部 Bonus API 規格：制定外部 Bonus API 規格文件，以利通知 Licensee 的 3rd party 獎勵 / Bonus 系統派發 Free bet</li>
+</ul>
+</li>
+<li><strong>活動建立流程模組化重構（Basic setup 與 Campaign setup）</strong>：<ul>
+<li>Basic setup（共用層）：涵蓋多 Licensee 建立權限（主站可幫自己與 Subsidiary 建立、Saba 內部人員可跨建）、站點 ID 顯示、多語系名稱/Banner/T&amp;C、排序權重（1 至 99）與曝光起訖時間</li>
+<li>Campaign setup（專屬層）：涵蓋 User group（手動/CSV/BI 標籤）、範圍選取、淨虧低消與回饋比例設定、Free bet setup</li>
+</ul>
+</li>
+<li><strong>Campaign Preview 預覽畫面呈現完整性</strong>：<ul>
+<li>預覽畫面完整呈現 Basic setup 與 Campaign setup 設定內容</li>
+<li>若為 by Period 活動，可預覽 Lossback 活動進度條：<ul>
+<li>顯示「玩家當前累計有效淨虧損 vs 最低門檻（淨虧低消）」</li>
+<li>達成門檻後顯示預計可得之 Free Bet 累積額度</li>
+</ul>
+</li>
+</ul>
+</li>
+<li><strong>已審核 Campaign 變更權限鎖定</strong>：<ul>
+<li>審核通過（Approved）之 Campaign 僅允許修改 External name、排序權重與曝光時間；其餘核心欄位（Licensee、User group、範圍、淨虧低消、回饋百分比、回饋 Free bet 上限、Free bet setup）全數鎖定不可變動</li>
+</ul>
+</li>
+<li><strong>Report 報表分權設計</strong>：<ul>
+<li>Saba 權限：可查看跨全平台、跨多間 Licensee 的整體彙整數據</li>
+<li>主站權限：可查看主站及其 Subsidiary 的數據</li>
+<li>Subsidiary：可查看本身 Subsidiary 的數據</li>
+<li>指標明訂包含觸發場次（by Match）或期數（by Period）及發放金額</li>
+</ul>
+</li>
+<li>可上傳Banner，有分Desktop和Mobile</li>
+<li>可設置Promotion的排序和曝光時間</li>
+<li><strong>前端平台支援</strong>：<ul>
+<li>支援 Mars（Desktop / Mobile）、Galaxy（Desktop / Mobile）、2.0（Desktop）、Standard（Mobile）</li>
+</ul>
+</li>
+</ol>
+</section>
+
+<section id="view-spec" class="doc hidden" aria-labelledby="tab-spec">
+<h2>Promotion Suite phase 2 - Lossback</h2>
+<h3>1. LAP｜Promotion Suite ( Create Campaign )</h3>
+<h4>1.1 Basic setup - 共用</h4>
+<ul>
+<li>Licensee and User group<ul>
+<li>Saba內部人員 - 可幫一家或多家Main site和Subsidiary創建Campaign</li>
+<li>Main site - 可幫自己和Subsidiary創建Campaign</li>
+<li>Subsidiary - 可幫自己創建Campaign</li>
+<li>要顯示Licensee site ID</li>
+<li>每一間Main site和Subsidiary可以各自設定User group<ul>
+<li>Manually enter</li>
+<li>CSV upload</li>
+<li>Saba BI tag and import</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>Campaign internal name</li>
+<li>Select Languages<ul>
+<li>Campaign External name</li>
+<li>Banner<ul>
+<li>Desktop</li>
+<li>Mobile</li>
+</ul>
+</li>
+<li>T&amp;C</li>
+</ul>
+</li>
+<li>Promotion page<ul>
+<li>Campaign排序權重 - 1 至 99，1排在最前面</li>
+<li>Campaign曝光時間 - Start time to End time</li>
+</ul>
+</li>
+</ul>
+<h4>1.2 Campaign setup - only for Lossback</h4>
+<ul>
+<li>選取範圍: by Match(單一賽事)或是by period(跨賽事)<ul>
+<li>by Match：Match狀態是Operations在Admin site有開盤, 單場賽事官方結算完成時觸發計算與派發。</li>
+<li>by Period：活動週期結束且該週期內所有賽事均已結算完成後，才執行全期總淨虧損計算並派發一次。</li>
+<li>系統會過濾掉已被該家Licensee選定、排定、正在進行的賽事，避免被選取同一場賽事</li>
+</ul>
+</li>
+<li>Free bet計算方式: 回饋百分比或回饋絕對金額<ul>
+<li>回饋百分比<ul>
+<li>輸入淨虧低消、回饋百分比、回饋Free bet上限</li>
+<li>淨虧損計算：<ul>
+<li>by Match：指定賽事之總有效投注額 - 總派彩金額（計算結果為負值）</li>
+<li>by Period：活動週期內指定賽事之累計總有效投注額 - 累計總派彩金額（計算結果為負值）</li>
+<li>若總派彩金額 ≥ 總有效投注額（全期結算為盈利或平手），淨虧損計為 0，不符合門檻亦不派發回饋</li>
+</ul>
+</li>
+<li>門檻判定：淨虧損絕對值 ≥ 淨虧低消</li>
+<li>回饋 Free bet = min(淨虧損絕對值 × 回饋百分比, 回饋Free bet上限)</li>
+<li>回饋Free bet計算後若有小數點，則無條件捨去</li>
+<li>需要考量因不同幣別的匯率，如何設定和呈現</li>
+</ul>
+</li>
+<li>回饋絕對金額<ul>
+<li>輸入淨虧低消、回饋絕對金額</li>
+<li>需要考量因不同幣別的匯率，如何設定和呈現</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>Free bet setup<ul>
+<li>適用範圍 - All or by League, Sport, Bet type</li>
+<li>適用賠率 - 最低賠率, 最高賠率</li>
+<li>適用時間 - Start time to End time</li>
+</ul>
+</li>
+</ul>
+<h4>1.3 以下注單不適用(待確認)</h4>
+<ul>
+<li>Bet Type</li>
+<li>bet type id 9 - Mix Parlay</li>
+<li>bet type id 10 - Outright</li>
+<li>bet type id 29 - System Parlay</li>
+<li>BB+</li>
+<li>468 Score Box Handicap (比分让球盘)</li>
+<li>469 Score Box Over/Under (比分大小盘)</li>
+<li>Bet slip status</li>
+<li>Multiple single bet</li>
+<li>Parlay Bet / single bet of Via Lucky</li>
+<li>SMP / Cash Out / Saba Coins Betting</li>
+<li>Quick Bet</li>
+</ul>
+<h4>1.4 Preview Campaign and submit for approval - 共用</h4>
+<ul>
+<li>可以preview Campaign，包含Basic setup和Campaign setup的內容</li>
+<li>若是 by Period，可以 preview Lossback活動進度條<ul>
+<li>顯示「玩家當前累計有效淨虧損 vs 最低門檻（淨虧低消）」</li>
+<li>達成門檻後顯示預計可得之 Free Bet 累積額度</li>
+</ul>
+</li>
+<li>若Preview Campaign後沒有問題，則可以送出給Manager審核，狀態變為In-Review</li>
+<li>若Manager審核Campaign不通過，需填寫理由，狀態變為Rejected</li>
+<li>若Campaign rejected後，申請人可以按edit，進行重新編輯，狀態變為draft</li>
+<li>若Campaign審核通過，即會依其條件進行，狀態變為Approved</li>
+<li>Campaign可以被暫停或刪除</li>
+<li>審核過後的Campaign僅External name、排序權重、曝光時間可以修改，其他內容例如Licensee、User group、範圍、淨虧低消、回饋百分比、回饋Free bet上限、Free bet setup都不可變動</li>
+</ul>
+<h4>1.5 Review Campaign report(待確認) only for Lossback</h4>
+<p>報表的資料可見範圍須依 Saba、主站、Subsidiary權限區隔</p>
+<ul>
+<li>活動名稱、活動期間及活動狀態。</li>
+<li>Licensee、站點、運動、聯賽、賽事及盤口。</li>
+<li>適用會員數及參與會員數。</li>
+<li>Lossback 觸發場次（by Match）或期數（by Period）及金額。</li>
+<li>觸發Free bet API的張數及金額</li>
+<li>觸發Bonus API的張數及金額</li>
+<li>Turnover、GGR 及Margin</li>
+<li>報表篩選及 CSV 匯出。</li>
+</ul>
+<h3>2. Lossback calculator</h3>
+<p>於現有系統上新增 Lossback 條件判斷及結算流程</p>
+<ul>
+<li>判斷注單、賽事、盤口、會員及活動是否符合資格。</li>
+<li>當達到結算時機（by Match: 賽事結算；by Period: 週期結束且全數賽事結算）並符合 Lossback 條件時，系統調用 Free bet API 派發 Free Bet。</li>
+<li>防止重複觸發。</li>
+<li>記錄觸發條件、觸發時間、比分、結算結果及失敗原因。</li>
+<li>支援失敗重試、異常監控及人工查詢。</li>
+</ul>
+<h3>3. 內部Free bet API和外部Bonus API規格</h3>
+<ul>
+<li>新增派發Free bet API - 系統調用 Free bet API 派發 Free Bet。</li>
+<li>新增recall free bet API - 當賽事reSettle時，系統打recall Freebet API回收Free bet，依照現在Free bet系統的邏輯</li>
+<li>需要制定外部 Bonus API規格文件，以利通知Licensee的3rd party 獎勵/Bonus系統派發Free bet</li>
+</ul>
+<h3>4. Member Site</h3>
+<ul>
+<li>通知User得到Free bet</li>
+<li>Free bet的使用依照現有的邏輯和流程</li>
+<li>針對 by Period 活動，會員端需呈現進度條，顯示『玩家當前累計有效淨虧損 vs 最低門檻（淨虧低消）』，達成門檻後顯示預計可得之 Free Bet 累積額度。</li>
+<li>需支援Mars（Desktop／Mobile）, Galaxy（Desktop／Mobile）, 2.0（Desktop）, Standard（Mobile）</li>
+</ul>
+</section>
+
+<aside class="drawer" id="drawer" aria-hidden="true" aria-labelledby="d-title">
+  <div class="d-head">
+    <span class="pill" id="d-pill"></span>
+    <h2 id="d-title"></h2>
+    <div class="d-ref" id="d-ref"></div>
+    <button class="close" id="d-close" aria-label="關閉說明">&times;</button>
+  </div>
+  <div class="d-body" id="d-body"></div>
+  <div class="d-foot">
+    <button id="d-prev">上一步</button>
+    <span id="d-count"></span>
+    <button id="d-next">下一步</button>
+  </div>
+</aside>
+
+<script>
+const LANES = [
+  {id:'ops', name:'Saba Operations', sub:'Admin Site 後台', color:'#3D5A80'},
+  {id:'lap', name:'Saba 內部人員 / 主站 / Subsidiary', sub:'LAP 後台 Promotion Suite', color:'#0E7C7B'},
+  {id:'mgr', name:'Manager', sub:'Campaign 審核', color:'#B87414'},
+  {id:'calc', name:'Lossback calculator', sub:'條件判斷與結算', color:'#12805C'},
+  {id:'api', name:'Free bet / Bonus API', sub:'內部與外部 API', color:'#9A4560'},
+  {id:'mem', name:'Member Site', sub:'會員端', color:'#6A55A3'},
+  {id:'rep', name:'報表', sub:'Saba / 主站 / Subsidiary', color:'#566573'}
+];
+
+const NODES = [
+  {id:'O1', lane:'ops', col:3, label:'賽事開盤', ref:'文件章節 1.2　Campaign setup：選取範圍', title:'賽事開盤',
+   s:[{t:'list', items:['by Match：Match 狀態是 Operations 在 Admin site 有開盤']}]},
+
+  {id:'L1', lane:'lap', col:2, label:'Basic setup', ref:'文件章節 1.1　Basic setup（共用）', title:'Basic setup（共用）',
+   s:[{t:'list', h:'Licensee and User group', items:['Saba 內部人員：可幫一家或多家 Main site 和 Subsidiary 創建 Campaign','Main site：可幫自己和 Subsidiary 創建 Campaign','Subsidiary：可幫自己創建 Campaign','要顯示 Licensee site ID','每一間 Main site 和 Subsidiary 可以各自設定 User group']},
+      {t:'list', h:'User group 設定方式', items:['Manually enter','CSV upload','Saba BI tag and import']},
+      {t:'list', h:'名稱與語言', items:['Campaign internal name','Select Languages：Campaign External name、Banner（Desktop、Mobile）、T&C']},
+      {t:'list', h:'Promotion page', items:['Campaign 排序權重：1 至 99，1 排在最前面','Campaign 曝光時間：Start time to End time']},
+      {t:'note', title:'來源：Changelog 9、10', text:'可上傳 Banner，有分 Desktop 和 Mobile；可設置 Promotion 的排序和曝光時間。'}]},
+  {id:'L3', lane:'lap', col:3, label:'選取範圍', ref:'文件章節 1.2　Campaign setup（Lossback 專用）', title:'選取範圍：by Match 或 by Period',
+   s:[{t:'list', items:['選取範圍：by Match（單一賽事）或是 by Period（跨賽事）','by Match：Match 狀態是 Operations 在 Admin site 有開盤，單場賽事官方結算完成時觸發計算與派發','by Period：活動週期結束且該週期內所有賽事均已結算完成後，才執行全期總淨虧損計算並派發一次','系統會過濾掉已被該家 Licensee 選定、排定、正在進行的賽事，避免被選取同一場賽事']}]},
+  {id:'L4', lane:'lap', col:4, label:'Free bet 計算方式', ref:'文件章節 1.2　Campaign setup（Lossback 專用）', title:'Free bet 計算方式：回饋百分比或回饋絕對金額',
+   s:[{t:'list', items:['Free bet 計算方式：回饋百分比或回饋絕對金額']},
+      {t:'list', h:'回饋百分比', items:['輸入淨虧低消、回饋百分比、回饋 Free bet 上限']},
+      {t:'list', h:'淨虧損計算（回饋百分比）', items:['by Match：指定賽事之總有效投注額 - 總派彩金額（計算結果為負值）','by Period：活動週期內指定賽事之累計總有效投注額 - 累計總派彩金額（計算結果為負值）','若總派彩金額 ≥ 總有效投注額（全期結算為盈利或平手），淨虧損計為 0，不符合門檻亦不派發回饋']},
+      {t:'list', h:'判定與回饋（回饋百分比）', items:['門檻判定：淨虧損絕對值 ≥ 淨虧低消','回饋 Free bet = min(淨虧損絕對值 × 回饋百分比, 回饋 Free bet 上限)','回饋 Free bet 計算後若有小數點，則無條件捨去','需要考量因不同幣別的匯率，如何設定和呈現']},
+      {t:'list', h:'回饋絕對金額', items:['輸入淨虧低消、回饋絕對金額','需要考量因不同幣別的匯率，如何設定和呈現']},
+      {t:'rules', label:'查看計算規則'}]},
+  {id:'L5', lane:'lap', col:5, label:'Free bet setup', ref:'文件章節 1.2　Campaign setup（Lossback 專用）', title:'Free bet setup',
+   s:[{t:'list', items:['適用範圍：All or by League, Sport, Bet type','適用賠率：最低賠率, 最高賠率','適用時間：Start time to End time']},
+      {t:'note', title:'來源：Changelog 3', text:'Free bet setup 正式整合至 Campaign setup：無需跨系統操作，直接於 Promotion Suite 設定派發之 Free Bet 規則。'}]},
+  {id:'L6', lane:'lap', col:6, label:'預覽並送審', ref:'文件章節 1.4　Preview Campaign and submit for approval（共用）', title:'預覽 Campaign 並送審（共用）',
+   s:[{t:'list', items:['可以 preview Campaign，包含 Basic setup 和 Campaign setup 的內容','若是 by Period，可以 preview Lossback 活動進度條','顯示「玩家當前累計有效淨虧損 vs 最低門檻（淨虧低消）」','達成門檻後顯示預計可得之 Free Bet 累積額度','Preview 後沒有問題，可以送出給 Manager 審核，狀態變為 In-Review']}]},
+
+  {id:'M1', lane:'mgr', col:6, label:'審核', decision:true, ref:'文件章節 1.4', title:'Manager 審核',
+   s:[{t:'list', items:['審核不通過：需填寫理由，狀態變為 Rejected','Rejected 後，申請人可以按 edit 重新編輯，狀態變為 draft','審核通過：Campaign 即會依其條件進行，狀態變為 Approved']}]},
+  {id:'M2', lane:'mgr', col:7, label:'Approved 生效', ref:'文件章節 1.4', title:'Approved 後生效',
+   s:[{t:'list', items:['若 Campaign 審核通過，即會依其條件進行，狀態變為 Approved','審核過後的 Campaign 僅 External name、排序權重、曝光時間可以修改，其他內容例如 Licensee、User group、範圍、淨虧低消、回饋百分比、回饋 Free bet 上限、Free bet setup 都不可變動']},
+      {t:'list', h:'暫停與刪除', items:['Campaign 可以被暫停或刪除']}]},
+
+  {id:'N1', lane:'calc', col:4, label:'不適用注單 (待確認)', rule:true, ref:'文件章節 1.3', title:'以下注單不適用（待確認）',
+   s:[{t:'list', h:'Bet Type', items:['bet type id 9：Mix Parlay','bet type id 10：Outright','bet type id 29：System Parlay','BB+','468 Score Box Handicap（比分让球盘）','469 Score Box Over/Under（比分大小盘）']},
+      {t:'list', h:'Bet slip status', items:['Multiple single bet','Parlay Bet / single bet of Via Lucky','SMP / Cash Out / Saba Coins Betting','Quick Bet']}]},
+  {id:'C3', lane:'calc', col:5, label:'防止重複觸發', ref:'文件章節 2　Lossback calculator', title:'防止重複觸發',
+   s:[{t:'list', items:['防止重複觸發']}]},
+  {id:'C4', lane:'calc', col:6, label:'紀錄與監控', ref:'文件章節 2　Lossback calculator', title:'紀錄與監控',
+   s:[{t:'list', items:['記錄觸發條件、觸發時間、比分、結算結果及失敗原因','支援失敗重試、異常監控及人工查詢']}]},
+  {id:'C1', lane:'calc', col:7, label:'資格判斷', ref:'文件章節 2　Lossback calculator', title:'資格判斷',
+   s:[{t:'note', text:'於現有系統上新增 Lossback 條件判斷及結算流程。'},
+      {t:'list', items:['判斷注單、賽事、盤口、會員及活動是否符合資格']},
+      {t:'goto', id:'N1', label:'查看不適用注單'}]},
+  {id:'C2', lane:'calc', col:8, label:'結算時機', ref:'文件章節 2、1.2', title:'達到結算時機並符合 Lossback 條件',
+   s:[{t:'list', items:['當達到結算時機（by Match：賽事結算；by Period：週期結束且全數賽事結算）並符合 Lossback 條件時，系統調用 Free bet API 派發 Free Bet','若總派彩金額 ≥ 總有效投注額（全期結算為盈利或平手），淨虧損計為 0，不符合門檻亦不派發回饋','門檻判定：淨虧損絕對值 ≥ 淨虧低消','回饋 Free bet = min(淨虧損絕對值 × 回饋百分比, 回饋 Free bet 上限)','回饋 Free bet 計算後若有小數點，則無條件捨去']},
+      {t:'rules', label:'查看計算規則'}]},
+
+  {id:'A3', lane:'api', col:7, label:'外部 Bonus API', ref:'文件章節 3　內部 Free bet API 和外部 Bonus API 規格', title:'外部 Bonus API 規格',
+   s:[{t:'list', items:['需要制定外部 Bonus API 規格文件，以利通知 Licensee 的 3rd party 獎勵 / Bonus 系統派發 Free bet']}]},
+  {id:'A1', lane:'api', col:8, label:'派發 Free bet', ref:'文件章節 3　內部 Free bet API 和外部 Bonus API 規格', title:'派發 Free bet API',
+   s:[{t:'list', items:['新增派發 Free bet API','系統調用 Free bet API 派發 Free Bet']}]},
+  {id:'A2', lane:'api', col:9, label:'回收 Free bet', ref:'文件章節 3　內部 Free bet API 和外部 Bonus API 規格', title:'recall Free bet API',
+   s:[{t:'list', items:['新增 recall free bet API','當賽事 reSettle 時，系統打 recall Freebet API 回收 Free bet，依照現在 Free bet 系統的邏輯']}]},
+
+  {id:'U4', lane:'mem', col:4, label:'支援平台', ref:'文件章節 4　Member Site', title:'支援平台',
+   s:[{t:'list', items:['Mars（Desktop / Mobile）','Galaxy（Desktop / Mobile）','2.0（Desktop）','Standard（Mobile）']}]},
+  {id:'U3', lane:'mem', col:5, label:'進度條', ref:'文件章節 4　Member Site', title:'by Period 活動進度條',
+   s:[{t:'list', items:['針對 by Period 活動，會員端需呈現進度條','顯示「玩家當前累計有效淨虧損 vs 最低門檻（淨虧低消）」','達成門檻後顯示預計可得之 Free Bet 累積額度']}]},
+  {id:'U1', lane:'mem', col:8, label:'通知 User', ref:'文件章節 4　Member Site', title:'通知 User 得到 Free bet',
+   s:[{t:'list', items:['通知 User 得到 Free bet']}]},
+  {id:'U2', lane:'mem', col:9, label:'使用 Free bet', ref:'文件章節 4　Member Site', title:'使用 Free bet',
+   s:[{t:'list', items:['Free bet 的使用依照現有的邏輯和流程']}]},
+
+  {id:'R1', lane:'rep', col:6, label:'Campaign report (待確認)', ref:'文件章節 1.5　Review Campaign report（待確認）only for Lossback', title:'Review Campaign report（待確認）',
+   s:[{t:'note', text:'報表的資料可見範圍須依 Saba、主站、Subsidiary 權限區隔。'},
+      {t:'list', items:['活動名稱、活動期間及活動狀態','Licensee、站點、運動、聯賽、賽事及盤口','適用會員數及參與會員數','Lossback 觸發場次（by Match）或期數（by Period）及金額','觸發 Free bet API 的張數及金額','觸發 Bonus API 的張數及金額','Turnover、GGR 及 Margin','報表篩選及 CSV 匯出']},
+      {t:'list', h:'權限範圍（來源：Changelog 8）', items:['Saba 權限：可查看跨全平台、跨多間 Licensee 的整體彙整數據','主站權限：可查看主站及其 Subsidiary 的數據','Subsidiary：可查看本身 Subsidiary 的數據','指標明訂包含觸發場次（by Match）或期數（by Period）及發放金額']}]}
+];
+
+const ORDER = ['O1','L1','L3','L4','L5','L6','M1','M2','N1','C1','C2','C3','C4','A1','A2','A3','U1','U2','U3','U4','R1'];
+
+const EDGES = [
+  {a:'O1',b:'L3',k:'v'},
+  {a:'L1',b:'L3',k:'h'},
+  {a:'L3',b:'L4',k:'h'},
+  {a:'L4',b:'L5',k:'h'},
+  {a:'L5',b:'L6',k:'h'},
+  {a:'L6',b:'M1',k:'v'},
+  {a:'M1',b:'M2',k:'h',label:'通過'},
+  {a:'M1',b:'L1',k:'back',label:'退回'},
+  {a:'M2',b:'C1',k:'v'},
+  {a:'C1',b:'C2',k:'h'},
+  {a:'C2',b:'A1',k:'v'},
+  {a:'A1',b:'U1',k:'v'},
+  {a:'U1',b:'U2',k:'h'},
+  {a:'C4',b:'R1',k:'v'}
+];
+
+/* ---------- Build flow ---------- */
+const flow = document.getElementById('flow');
+const laneIndex = {};
+LANES.forEach((l,i)=>{
+  laneIndex[l.id]=i+1;
+  const band=document.createElement('div');
+  band.className='band';
+  band.style.gridRow=i+1;
+  flow.appendChild(band);
+  const lab=document.createElement('div');
+  lab.className='lane-label';
+  lab.style.gridRow=i+1;
+  lab.style.setProperty('--lc',l.color);
+  lab.innerHTML='<b>'+l.name+'</b><span>'+l.sub+'</span>';
+  flow.appendChild(lab);
+});
+const svgNS='http://www.w3.org/2000/svg';
+const svg=document.createElementNS(svgNS,'svg');
+svg.setAttribute('class','edges');
+svg.setAttribute('aria-hidden','true');
+svg.innerHTML='<defs>'+
+ '<marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#8796A5"/></marker>'+
+ '<marker id="ahb" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#B87414"/></marker></defs>';
+flow.appendChild(svg);
+
+const nodeEl={};
+const laneById=Object.fromEntries(LANES.map(l=>[l.id,l]));
+NODES.forEach(n=>{
+  const b=document.createElement('button');
+  b.className='node'+(n.rule?' rule':'')+(n.decision?' decision':'');
+  b.type='button';
+  b.textContent=n.label;
+  b.dataset.id=n.id;
+  b.setAttribute('aria-pressed','false');
+  b.style.gridRow=laneIndex[n.lane];
+  b.style.gridColumn=n.col+1;
+  b.style.setProperty('--lc',laneById[n.lane].color);
+  b.addEventListener('click',()=>openNode(n.id));
+  flow.appendChild(b);
+  nodeEl[n.id]=b;
+});
+
+function box(el){
+  const f=flow.getBoundingClientRect(), r=el.getBoundingClientRect();
+  return {l:r.left-f.left,r:r.right-f.left,t:r.top-f.top,b:r.bottom-f.top,cx:(r.left+r.right)/2-f.left,cy:(r.top+r.bottom)/2-f.top};
+}
+function drawEdges(){
+  svg.querySelectorAll('.e').forEach(e=>e.remove());
+  EDGES.forEach(e=>{
+    const A=box(nodeEl[e.a]), B=box(nodeEl[e.b]);
+    let d, lx, ly, back=e.k==='back';
+    if(e.k==='h'){ d=`M${A.r} ${A.cy} L${B.l-2} ${B.cy}`; lx=(A.r+B.l)/2; ly=A.t-7; }
+    else if(e.k==='v'){
+      if(B.cy>A.cy){ d=`M${A.cx} ${A.b} L${B.cx} ${B.t-2}`; ly=(A.b+B.t)/2; }
+      else { d=`M${A.cx} ${A.t} L${B.cx} ${B.b+2}`; ly=(A.t+B.b)/2; }
+      lx=A.cx+8;
+    }
+    else if(e.k==='dr'){ d=`M${A.cx} ${A.b} L${A.cx} ${B.cy} L${B.l-2} ${B.cy}`; lx=A.cx+8; ly=(A.b+B.cy)/2; }
+    else { const yy=A.b+14; d=`M${A.cx} ${A.b} L${A.cx} ${yy} L${B.cx} ${yy} L${B.cx} ${B.b+2}`; lx=(A.cx+B.cx)/2; ly=yy-6; }
+    const p=document.createElementNS(svgNS,'path');
+    p.setAttribute('class','e');
+    p.setAttribute('d',d);
+    p.setAttribute('fill','none');
+    p.setAttribute('stroke',back?'#B87414':'#8796A5');
+    p.setAttribute('stroke-width','2');
+    if(back) p.setAttribute('stroke-dasharray','7 5');
+    p.setAttribute('marker-end',back?'url(#ahb)':'url(#ah)');
+    svg.appendChild(p);
+    if(e.label){
+      const t=document.createElementNS(svgNS,'text');
+      t.setAttribute('class','e');
+      t.setAttribute('x',lx); t.setAttribute('y',ly);
+      t.setAttribute('text-anchor','middle');
+      t.setAttribute('font-size','13');
+      t.setAttribute('font-weight','700');
+      t.setAttribute('fill',back?'#B87414':'#33414F');
+      t.setAttribute('stroke','#fff'); t.setAttribute('stroke-width','4'); t.setAttribute('paint-order','stroke');
+      t.textContent=e.label;
+      svg.appendChild(t);
+    }
+  });
+}
+window.addEventListener('resize',drawEdges);
+if(document.fonts&&document.fonts.ready) document.fonts.ready.then(drawEdges);
+requestAnimationFrame(drawEdges);
+
+/* ---------- Drawer ---------- */
+const drawer=document.getElementById('drawer');
+const dBody=document.getElementById('d-body');
+let current=null;
+function esc(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;');}
+
+function openNode(id){
+  const n=NODES.find(x=>x.id===id); if(!n) return;
+  current=id;
+  Object.values(nodeEl).forEach(b=>b.setAttribute('aria-pressed','false'));
+  nodeEl[id].setAttribute('aria-pressed','true');
+  const lane=laneById[n.lane];
+  drawer.style.setProperty('--lc',lane.color);
+  document.getElementById('d-pill').textContent=lane.name;
+  document.getElementById('d-title').textContent=n.title;
+  document.getElementById('d-ref').textContent=n.ref;
+  let h='';
+  n.s.forEach(s=>{
+    if(s.t==='list'){
+      if(s.h) h+='<h3>'+esc(s.h)+'</h3>';
+      h+='<ul>'+s.items.map(i=>'<li>'+esc(i)+'</li>').join('')+'</ul>';
+    } else if(s.t==='ex'){
+      h+='<div class="example"><b>'+esc(s.title||'範例')+'</b>'+esc(s.text)+'</div>';
+    } else if(s.t==='next'){
+      h+='<div class="next"><b>Next phase</b>'+s.items.map(esc).join('<br>')+'</div>';
+    } else if(s.t==='note'){
+      h+='<div class="example"><b>'+esc(s.title||'說明')+'</b>'+esc(s.text)+'</div>';
+    } else if(s.t==='rules'){
+      h+='<button class="linkbtn" data-act="rules">'+esc(s.label)+'</button>';
+    } else if(s.t==='goto'){
+      h+='<button class="linkbtn" data-act="goto" data-id="'+s.id+'">'+esc(s.label)+'</button>';
+    }
+  });
+  dBody.innerHTML=h;
+  dBody.scrollTop=0;
+  const i=ORDER.indexOf(id);
+  document.getElementById('d-count').textContent=(i+1)+' / '+ORDER.length;
+  document.getElementById('d-prev').disabled=i<=0;
+  document.getElementById('d-next').disabled=i>=ORDER.length-1;
+  drawer.style.top=document.querySelector('header').getBoundingClientRect().bottom+'px';
+  drawer.classList.add('open');
+  drawer.setAttribute('aria-hidden','false');
+}
+function closeDrawer(){
+  drawer.classList.remove('open');
+  drawer.setAttribute('aria-hidden','true');
+  Object.values(nodeEl).forEach(b=>b.setAttribute('aria-pressed','false'));
+  const was=current; current=null;
+  if(was&&nodeEl[was]) nodeEl[was].focus();
+}
+function step(d){
+  if(!current){ openNode(ORDER[0]); return; }
+  const i=ORDER.indexOf(current)+d;
+  if(i>=0&&i<ORDER.length) openNode(ORDER[i]);
+}
+document.getElementById('d-close').addEventListener('click',closeDrawer);
+document.getElementById('d-prev').addEventListener('click',()=>step(-1));
+document.getElementById('d-next').addEventListener('click',()=>step(1));
+dBody.addEventListener('click',e=>{
+  const b=e.target.closest('button'); if(!b) return;
+  if(b.dataset.act==='rules'){ closeDrawer(); showView('rules'); }
+  if(b.dataset.act==='goto'){ openNode(b.dataset.id); }
+});
+document.addEventListener('keydown',e=>{
+  if(document.getElementById('view-flow').classList.contains('hidden')) return;
+  if(e.key==='Escape'&&current){ closeDrawer(); }
+  else if(e.key==='ArrowRight'&&current){ e.preventDefault(); step(1); }
+  else if(e.key==='ArrowLeft'&&current){ e.preventDefault(); step(-1); }
+});
+
+/* ---------- Tabs and rules ---------- */
+function showView(v){
+  ['flow','rules','changelog','spec'].forEach(n=>document.getElementById('view-'+n).classList.toggle('hidden',v!==n));
+  document.querySelectorAll('.tab').forEach(t=>t.setAttribute('aria-selected',String(t.dataset.view===v)));
+  if(v==='flow') requestAnimationFrame(drawEdges);
+  else if(current) closeDrawer();
+  if(v==='changelog'||v==='spec') window.scrollTo(0,0);
+}
+document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click',()=>showView(t.dataset.view)));
+
+function showRule(){
+  let h='<h2 class="rtitle">Lossback 計算規則</h2><p class="rdesc">當達到結算時機並符合條件時，依下列規則判定（回饋百分比）。</p>';
+  h+='<table><thead><tr><th>步驟</th><th>規則</th></tr></thead><tbody>';
+  [['淨虧損（by Match）','指定賽事之總有效投注額 - 總派彩金額（計算結果為負值）'],
+   ['淨虧損（by Period）','活動週期內指定賽事之累計總有效投注額 - 累計總派彩金額（計算結果為負值）'],
+   ['前置判定','若總派彩金額 ≥ 總有效投注額（全期結算為盈利或平手），淨虧損計為 0，不符合門檻亦不派發回饋'],
+   ['門檻判定','淨虧損絕對值 ≥ 淨虧低消'],
+   ['回饋 Free bet','回饋 Free bet = min(淨虧損絕對值 × 回饋百分比, 回饋 Free bet 上限)'],
+   ['小數處理','回饋 Free bet 計算後若有小數點，則無條件捨去']
+  ].forEach(r=>{ h+='<tr><td class="scn">'+esc(r[0])+'</td><td>'+esc(r[1])+'</td></tr>'; });
+  h+='</tbody></table>';
+  h+='<h2 class="rtitle" style="margin-top:28px">Free bet 計算方式</h2>';
+  h+='<table><thead><tr><th>方式</th><th>輸入項目</th></tr></thead><tbody>';
+  [['回饋百分比','輸入淨虧低消、回饋百分比、回饋 Free bet 上限'],
+   ['回饋絕對金額','輸入淨虧低消、回饋絕對金額']
+  ].forEach(r=>{ h+='<tr><td class="scn">'+esc(r[0])+'</td><td>'+esc(r[1])+'</td></tr>'; });
+  h+='</tbody></table>';
+  h+='<p class="rdesc" style="margin-top:14px">需要考量因不同幣別的匯率，如何設定和呈現（回饋百分比與回饋絕對金額皆適用）。</p>';
+  h+='<h2 class="rtitle" style="margin-top:28px">結算時機</h2>';
+  h+='<table><thead><tr><th>選取範圍</th><th>觸發計算與派發的時機</th></tr></thead><tbody>';
+  [['by Match（單一賽事）','Match 狀態是 Operations 在 Admin site 有開盤，單場賽事官方結算完成時觸發計算與派發。'],
+   ['by Period（跨賽事）','活動週期結束且該週期內所有賽事均已結算完成後，才執行全期總淨虧損計算並派發一次。']
+  ].forEach(r=>{ h+='<tr><td class="scn">'+esc(r[0])+'</td><td>'+esc(r[1])+'</td></tr>'; });
+  h+='</tbody></table>';
+  h+='<h2 class="rtitle" style="margin-top:28px">Free bet setup</h2>';
+  h+='<table><thead><tr><th>設定項目</th><th>設定內容</th></tr></thead><tbody>';
+  [['適用範圍','All or by League, Sport, Bet type'],
+   ['適用賠率','最低賠率, 最高賠率'],
+   ['適用時間','Start time to End time']
+  ].forEach(r=>{ h+='<tr><td class="scn">'+esc(r[0])+'</td><td>'+esc(r[1])+'</td></tr>'; });
+  h+='</tbody></table>';
+  h+='<p class="rnote">排除之 Bet Type 與 Bet slip status 見文件 1.3（待確認）。<button type="button" id="goto-b3">查看不適用注單</button></p>';
+  document.getElementById('rule-body').innerHTML=h;
+  document.getElementById('goto-b3').addEventListener('click',()=>{ showView('flow'); openNode('N1'); });
+}
+showRule();
+</script>
+</body>
+</html>
